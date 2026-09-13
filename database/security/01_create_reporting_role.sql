@@ -18,15 +18,22 @@
 -- either way.
 --
 -- The login's password lives in a :setvar variable rather than inline
--- in a CREATE LOGIN statement -- this repo is going to a public GitHub
--- repo, so keeping the one credential isolated and easy to override
+-- in a CREATE LOGIN statement -- this repo is public on GitHub, so
+-- keeping the one credential isolated and easy to override
 -- (sqlcmd -v ReportingLoginPassword="...") is worth doing even for a
 -- practice password that guards synthetic data.
+--
+-- The value below is a PLACEHOLDER, not a real credential -- set your
+-- own before running this, either by editing this line or passing
+-- -v ReportingLoginPassword="..." on the sqlcmd command line. (An
+-- earlier real password was committed here by mistake and has since
+-- been rotated on the server; this file was rewritten to never hold a
+-- working credential again.)
 --
 -- Run after database/procedures/01_create_reporting_procedures.sql.
 -- =============================================
 
-:setvar ReportingLoginPassword "Reporting#2026!Practice"
+:setvar ReportingLoginPassword "ChangeMe_SetYourOwnPassword!2026"
 
 USE master;
 GO
