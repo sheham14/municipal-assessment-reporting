@@ -17,3 +17,6 @@ obj/
 # One-time local setup script containing a plaintext practice password --
 # never meant to be committed, deleted after use
 setup-file-delivery-account.ps1
+
+# Personal interview-prep notes -- not a project deliverable
+INTERVIEW_PREP.md
