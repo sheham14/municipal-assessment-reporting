@@ -109,6 +109,16 @@ Verified the whole chain end-to-end rather than trusting "subscription created" 
 
 ---
 
+**2026-09-13 — Tier 3: differential backups, retention cleanup, and a caught cutoff-date bug**
+
+Added a differential backup job (every 4 hours) alongside the existing full backup job, plus a retention cleanup step using `xp_delete_file` (the same mechanism SSMS's own Maintenance Cleanup Task uses).
+
+First draft of the cleanup step had a real bug, caught before running it: computed the 7-day cutoff date once, at the time the setup *script* was written (`DATEADD(DAY, -7, GETDATE())` evaluated in the outer script), then baked that fixed value into the job step's command as a literal. That would mean every future run of the job deletes files older than the same fixed historical date forever, not a rolling 7-day window — the cleanup would eventually stop deleting anything at all as "now" moved further past that frozen cutoff. Fixed by moving the `DATEADD(DAY, -7, GETDATE())` calculation *inside* the job step's own command text, so it's computed fresh every time the step actually executes.
+
+Verified the full+differential restore chain specifically (not just that each backup job runs): restored the full backup `WITH NORECOVERY`, applied the differential `WITH RECOVERY` on top, and confirmed all 5 tables' row counts matched the original exactly. The differential only had to apply 88 pages versus the full's 11,568 — the whole reason differentials exist, demonstrated with real numbers rather than asserted.
+
+---
+
 **2026-09-12 — Backup job failed on the first run: missing path separator, not a permissions problem**
 
 First run of the backup Agent job failed with `Access is denied` trying to open `...MSSQL\BackupMunicipalAssessment_20260912_064310.bak`. Read the path literally instead of assuming it was a real permissions issue: there's no `\` between `Backup` (the folder) and the filename. `SERVERPROPERTY('InstanceDefaultBackupPath')` doesn't include a trailing backslash, and the script concatenated the timestamped filename directly onto it, producing a path that resolved to a nonexistent location one folder up from where the account actually has write access — hence "access denied," even though the real problem was a malformed path, not a permission grant.

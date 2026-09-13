@@ -64,3 +64,16 @@ The `Worktable` spool is gone entirely. `Payment` is still accessed once per bil
 | Logical reads (Payment/Worktable path) | 1,202,754 | 759,495 | ~37% fewer |
 
 This is a modest, honest improvement, not a manufactured one — the report still touches every unpaid bill and every payment, because that's what an aging report inherently has to do. What changed is *how* it gets there: a seek instead of a scan-and-spool.
+
+## 6. Confirming it with Query Store (Tier 3)
+
+Everything above was captured manually (`SET STATISTICS IO, TIME ON`, a captured execution plan). SQL Server's Query Store does this automatically, for every significant query, all the time — worth demonstrating separately since it's a distinct skill from manual tuning.
+
+Enabled Query Store (`database/schema/04_enable_query_store.sql`), then reproduced the same before/after scenario under it (`performance/query-store-demo.sql`): dropped `IX_Payment_TaxBillID`, ran `rpt_ArrearsAging`, restored the index, ran it again. The SQL text never changed — only the index did — so Query Store correctly recorded this as **one `query_id` with two different `plan_id`s**:
+
+| | `plan_id` | Avg duration | Avg logical reads |
+|---|---|---|---|
+| Before (no index) | 1 | 3,152 ms | 1,208,620 |
+| After (with index) | 3 | 1,797 ms | 792,251 |
+
+Consistent with the manually-measured numbers above (same query, same change, two different measurement methods agreeing). The practical value of Query Store over the manual approach: this history is captured automatically for every query going forward, not just the one time someone happens to run `SET STATISTICS ON` around it — useful for catching a plan regression weeks after a change, not just proving one at the moment it's made.

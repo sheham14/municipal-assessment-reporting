@@ -84,21 +84,23 @@ erDiagram
     }
 ```
 
+*Notation: `||--o{` reads as "one, to zero-or-many" — e.g. one `Ward` has zero-or-many `Property` rows. `PK`/`FK` mark primary/foreign keys.*
+
 **Data volume:** 50,000 properties, 5 tax years (2022–2026), 237,816 assessments/bills, 202,150 payments, 18,185 deliberately-generated defects caught and logged by the transform (see below).
 
 **Repository layout:**
 
 ```
 /database
-    schema/       DDL, plus the one tuning index (03_tuning_indexes.sql)
+    schema/       DDL, the tuning index, Query Store enablement
     staging/      synthetic data generation, deliberately messy
     transform/    staging -> normalized, with rejection logging
     views/        reporting views
     procedures/   parameterized stored procedures (report datasets)
     security/     least-privilege reporting role
-    jobs/         backup, restore test, maintenance -- scripted, not just run once
+    jobs/         full/differential backup, both restore tests, maintenance -- scripted, not just run once
 /reports          the 3 .rdl reports
-/performance      before/after tuning evidence
+/performance      before/after tuning evidence, Query Store demo
 /docs             screenshots, decisions log
 subscription-output/  local target for the scheduled subscription (git-ignored)
 ```
@@ -196,15 +198,17 @@ The shared data source (`MunicipalAssessmentDS`) itself connects using the `Repo
 
 | Job | Script | What it does |
 |---|---|---|
-| Full backup | `database/jobs/01_backup_job.sql` | Nightly (1 AM), compressed, checksummed, timestamped filename so runs don't overwrite each other |
-| Test restore + verification | `database/jobs/02_test_restore.sql` | Restores the latest backup to `MunicipalAssessment_RestoreTest` (a second database, not overwriting the original); verifies by comparing row counts against the original across 6 tables **and** by running `rpt_WardSummary` against the restored copy |
+| Full backup + retention cleanup | `database/jobs/01_backup_job.sql` | Nightly (1 AM), compressed, checksummed, timestamped filename so runs don't overwrite each other. Step 2 deletes `.bak` files older than 7 days via `xp_delete_file` (the cutoff is computed fresh every run — a rolling window, not a fixed date) |
+| Differential backup | `database/jobs/04_differential_backup_job.sql` | Every 4 hours starting 5 AM — captures only what changed since the last full backup |
+| Test restore + verification (full only) | `database/jobs/02_test_restore.sql` | Restores the latest full backup to `MunicipalAssessment_RestoreTest`; verifies by comparing row counts against the original across 6 tables **and** by running `rpt_WardSummary` against the restored copy |
+| Test restore + verification (full + differential) | `database/jobs/05_test_differential_restore.sql` | Restores the full backup `WITH NORECOVERY`, applies the most recent matching differential `WITH RECOVERY`, to a separate `MunicipalAssessment_DiffRestoreTest` database; verifies row counts match |
 | Maintenance | `database/jobs/03_maintenance_job.sql` | Weekly (Sunday 2 AM); rebuilds indexes ≥30% fragmented, reorganizes 5–30%, leaves the rest alone, then updates statistics |
+
+**Backup/retention strategy:** full backup nightly, differential every 4 hours, 7-day retention on both. Restoring the most recent state means one full + one differential (not a chain of every differential since the last full — a differential always captures everything changed since the *last full*, which is exactly why the restore only ever needs two files). Verified this specifically: the differential restore only had to apply 88 pages versus the full's 11,568 — the actual point of taking differentials at all, not just an assertion.
 
 The restore is the part that actually matters — it proves the backup is usable, not just that a `.bak` file exists. All 6 tables checked (`Ward`, `Property`, `Assessment`, `TaxBill`, `Payment`, `RejectedRow`) matched the original exactly, and a real reporting procedure ran correctly against the restored copy:
 
 ![Restore verification — row counts matching and a reporting procedure running against the restored database](docs/screenshots/restore-verification.png)
-
-Explicitly out of scope, per the spec: differential backups, backup retention/cleanup strategy, Query Store.
 
 ---
 
@@ -222,14 +226,13 @@ Full writeup: [`performance/tuning-notes.md`](performance/tuning-notes.md). Summ
 
 A modest, honest improvement — the report still touches every unpaid bill and every payment, because that's inherent to what an aging report has to compute. What changed is a scan-and-spool becoming a seek.
 
----
+### Confirming it with Query Store
 
-## Screenshots to add
+Enabled Query Store (`database/schema/04_enable_query_store.sql`) and reproduced the same before/after scenario under it (`performance/query-store-demo.sql`): dropped the tuning index, ran the report, restored the index, ran it again. Since the SQL text never changed — only the index did — Query Store correctly recorded it as **one `query_id` with two different `plan_id`s**:
 
-Save these into `docs/screenshots/` with the exact file names below (the links above will then resolve automatically):
+| | Avg duration | Avg logical reads |
+|---|---|---|
+| Before (no index) | 3,152 ms | 1,208,620 |
+| After (with index) | 1,797 ms | 792,251 |
 
-1. `report1-assessment-totals.png` — Report 1 rendered in the browser, table + chart visible ✅
-2. `report2-drillthrough-summary.png` and `report2-drillthrough-detail.png` — Report 2's ward summary and the property detail it drills into ✅
-3. `report3-arrears-current.png`, `report3-arrears-31to60.png`, `report3-arrears-90plus.png` — Report 3's bucket ordering and exception formatting ✅
-4. `security-folder-permissions.png` — the SSRS Security screen showing `BUILTIN\Administrators` (Content Manager) and `BUILTIN\Users` (Browser) on `03_ArrearsAging` ✅
-5. `restore-verification.png` — SSMS or a query result showing the row-count comparison between `MunicipalAssessment` and `MunicipalAssessment_RestoreTest` ✅
+Consistent with the manually-measured numbers above — two different measurement methods agreeing. The practical value over manual `STATISTICS` capture: this history builds automatically for every significant query going forward, useful for catching a regression weeks later, not just proving an improvement at the moment it's made.
