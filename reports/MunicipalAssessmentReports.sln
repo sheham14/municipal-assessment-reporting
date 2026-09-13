@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37628.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F14B399A-7131-4C87-9E4B-1186C45EF12D}") = "MunicipalAssessmentReports", "MunicipalAssessmentReports\MunicipalAssessmentReports.rptproj", "{F2509177-9280-CAF9-6632-2392C8C91917}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		DebugLocal|Default = DebugLocal|Default
+		Release|Default = Release|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Debug|Default.ActiveCfg = Debug
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Debug|Default.Build.0 = Debug
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Debug|Default.Deploy.0 = Debug
+		{F2509177-9280-CAF9-6632-2392C8C91917}.DebugLocal|Default.ActiveCfg = DebugLocal
+		{F2509177-9280-CAF9-6632-2392C8C91917}.DebugLocal|Default.Build.0 = DebugLocal
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Release|Default.ActiveCfg = Release
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Release|Default.Build.0 = Release
+		{F2509177-9280-CAF9-6632-2392C8C91917}.Release|Default.Deploy.0 = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F2D081E4-C716-48CC-8554-559D3F9F1177}
+	EndGlobalSection
+EndGlobal

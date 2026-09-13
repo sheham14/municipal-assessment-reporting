@@ -1,0 +1,19 @@
+# Scheduled subscription output -- runtime-generated, not a source artifact.
+# The scripts that produce it are the artifact, not the files themselves.
+subscription-output/*
+!subscription-output/.gitkeep
+
+# Visual Studio / SSRS project local files
+.vs/
+bin/
+obj/
+*.user
+*.rsuser
+*.rdl.data
+
+# SQL Server backups -- scripts are the artifact, not the .bak (see PROJECT_SPEC.md)
+*.bak
+
+# One-time local setup script containing a plaintext practice password --
+# never meant to be committed, deleted after use
+setup-file-delivery-account.ps1

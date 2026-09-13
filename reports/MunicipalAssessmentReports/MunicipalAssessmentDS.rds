@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RptDataSource xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="MunicipalAssessmentDS">
+  <ConnectionProperties>
+    <Extension>SQL</Extension>
+    <ConnectString>Data Source=OMEN;Initial Catalog=MunicipalAssessment</ConnectString>
+  </ConnectionProperties>
+  <DataSourceID>921d4ef6-7b5b-4b9d-87cd-5f33b5b5bb2a</DataSourceID>
+</RptDataSource>
